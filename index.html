@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>夜ご飯ルーレット</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #111827, #312e81);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 500px;
+  padding: 25px;
+}
+
+h1 {
+  font-size: 32px;
+  margin-bottom: 25px;
+}
+
+.roulette {
+  position: relative;
+  width: min(85vw, 380px);
+  height: min(85vw, 380px);
+  margin: 0 auto 30px;
+}
+
+canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+
+.pointer {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 35px solid #ff4757;
+  z-index: 10;
+}
+
+button {
+  border: none;
+  background: #ff4757;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 16px 55px;
+  border-radius: 50px;
+  box-shadow: 0 6px 0 #c0392b;
+  cursor: pointer;
+}
+
+button:active {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 #c0392b;
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+#result {
+  margin-top: 25px;
+  font-size: 26px;
+  font-weight: bold;
+  min-height: 40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🍽️ 今日の夜ご飯</h1>
+
+<div class="roulette">
+  <div class="pointer"></div>
+  <canvas id="wheel" width="500" height="500"></canvas>
+</div>
+
+<button id="spin">回す！</button>
+
+<div id="result"></div>
+
+</div>
+
+<script>
+
+const items = [
+  "サイゼリヤ",
+  "まいどおおきに食堂",
+  "大起水産",
+  "お寿司"
+];
+
+const colors = [
+  "#e74c3c",
+  "#f1c40f",
+  "#3498db",
+  "#2ecc71"
+];
+
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const spinButton = document.getElementById("spin");
+const result = document.getElementById("result");
+
+let rotation = 0;
+let spinning = false;
+
+function drawWheel() {
+
+  const center = canvas.width / 2;
+  const radius = center;
+  const angle = (Math.PI * 2) / items.length;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < items.length; i++) {
+
+    const start = rotation + i * angle;
+    const end = start + angle;
+
+    ctx.beginPath();
+    ctx.moveTo(center, center);
+    ctx.arc(center, center, radius, start, end);
+    ctx.closePath();
+
+    ctx.fillStyle = colors[i];
+    ctx.fill();
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.save();
+
+    ctx.translate(center, center);
+    ctx.rotate(start + angle / 2);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 28px sans-serif";
+
+    ctx.fillText(items[i], radius - 25, 10);
+
+    ctx.restore();
+  }
+
+}
+
+drawWheel();
+
+spinButton.addEventListener("click", () => {
+
+  if (spinning) return;
+
+  spinning = true;
+  spinButton.disabled = true;
+  result.textContent = "";
+
+  const startRotation = rotation;
+
+  // 5〜8回転＋ランダム
+  const extraRotation =
+    Math.PI * 2 * (5 + Math.random() * 3);
+
+  const duration = 4500;
+  const startTime = performance.now();
+
+  function animate(currentTime) {
+
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // 滑らかに減速
+    const easeOut =
+      1 - Math.pow(1 - progress, 4);
+
+    rotation =
+      startRotation + extraRotation * easeOut;
+
+    drawWheel();
+
+    if (progress < 1) {
+
+      requestAnimationFrame(animate);
+
+    } else {
+
+      spinning = false;
+      spinButton.disabled = false;
+
+      determineResult();
+
+    }
+
+  }
+
+  requestAnimationFrame(animate);
+
+});
+
+function determineResult() {
+
+  const angle = (Math.PI * 2) / items.length;
+
+  // 上方向（-90度）が指している位置を計算
+  let normalized =
+    ((-Math.PI / 2 - rotation) % (Math.PI * 2)
+    + Math.PI * 2) % (Math.PI * 2);
+
+  const index =
+    Math.floor(normalized / angle);
+
+  result.textContent =
+    "🎉 今日の夜ご飯は「" +
+    items[index] +
+    "」！";
+
+}
+
+</script>
+
+</body>
+</html>
